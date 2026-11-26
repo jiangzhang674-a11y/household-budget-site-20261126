@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家计本 · 年度趋势</title>
+<meta name="description" content="2026 年 1–11 月收支趋势：每月收入支出对比、储蓄率曲线、全年攒了多少钱。">
+<link rel="stylesheet" href="style.css">
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">🏠 家计本 <span>· 家庭记账</span></div>
+  <nav>
+    <a href="index.html">首页总览</a>
+    <a href="overview.html">月度收支</a>
+    <a href="categories.html">分类支出</a>
+    <a href="add.html">记一笔</a>
+    <a href="goals.html">储蓄目标</a>
+    <a href="trends.html">年度趋势</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>年度趋势 · 2026年1–11月</h1>
+  <p class="small" id="trend-head">示例家庭账本（演示数据） · 11 个月一共攒下 <strong>¥71,600</strong>，平均每月攒 ¥6,509，平均储蓄率 32.4%。</p>
+  <p class="small">11 月一栏含你在「记一笔」里记的账，与首页、分类页、月度页同一口径；其余月份是示例数。</p>
+
+  <section class="kpis">
+    <div class="kpi good"><div class="label">全年收入（1–11月）</div><div class="value num" id="t-income">¥221,200</div><div class="sub">月均 ¥20,109</div></div>
+    <div class="kpi"><div class="label">全年支出（1–11月）</div><div class="value num" id="t-expense">¥149,600</div><div class="sub">月均 ¥13,600</div></div>
+    <div class="kpi good"><div class="label">全年结余</div><div class="value num" id="t-save">¥71,600</div><div class="sub">已超全年目标 ¥66,000</div></div>
+    <div class="kpi warn"><div class="label">攒得最少的一月</div><div class="value num">2月 ¥4,800</div><div class="sub">春节开销大，储蓄率 24.5%</div></div>
+  </section>
+
+  <section class="card">
+    <h2>每月收支
+      <span class="more"><span class="seg" id="trend-mode">
+        <button type="button" data-m="both" class="on">收入 vs 支出</button>
+        <button type="button" data-m="save">只看每月结余</button>
+      </span></span>
+    </h2>
+    <canvas id="chart-year" class="chart" role="img" aria-label="2026年每月收支柱状图"></canvas>
+    <div class="legend" id="trend-legend"><span><i style="background:#0e7a5f"></i>收入</span><span><i style="background:#e8960c"></i>支出</span></div>
+  </section>
+
+  <section class="card">
+    <h2>储蓄率走势（结余 ÷ 收入）</h2>
+    <canvas id="chart-rate" class="chart" role="img" aria-label="每月储蓄率折线图"></canvas>
+    <p class="small">2 月掉到 24.5% 是春节，3 月回升到 35.8% 是全年最高；之后一直稳定在 31%–36% 之间。</p>
+  </section>
+
+  <section class="card">
+    <h2>全年三句话</h2>
+    <p>1️⃣ <strong>攒钱很稳：</strong>11 个月里 10 个月储蓄率过 30%，只有春节的 2 月没达标。</p>
+    <p>2️⃣ <strong>大头是住房：</strong>房贷每月 ¥4,200 全年不变，占全年支出的 30.9%。</p>
+    <p id="trend-third">3️⃣ <strong>下月可冲：</strong>照每月 ¥6,500 的结余，12 月底全年结余将到约 ¥78,100，旅行基金（还差 ¥2,400）12 月就能达成。</p>
+    <div class="btnrow"><a class="btn small" href="goals.html">去看储蓄目标</a><a class="btn ghost small" href="overview.html">回月度收支</a></div>
+  </section>
+</main>
+
+<footer><nav>
+  <a href="index.html">首页总览</a><a href="overview.html">月度收支</a><a href="categories.html">分类支出</a><a href="add.html">记一笔</a><a href="goals.html">储蓄目标</a><a href="trends.html">年度趋势</a>
+</nav><p>家计本 · 纯静态家庭记账站 · 数据仅存本地 · 示例账本仅供演示</p></footer>
+
+<script>
+function drawSaveBars(cv, labels, vals) {
+  var s = setupCanvas(cv, 260), ctx = s.ctx, W = s.w, H = s.h;
+  var padL = 46, padR = 10, padT = 14, padB = 26;
+  var max = 0; vals.forEach(function (v) { if (v > max) max = v; });
+  max = Math.ceil(max / 1000) * 1000;
+  ctx.font = "12px sans-serif"; ctx.fillStyle = "#6b7a73"; ctx.strokeStyle = "#e2ddd2";
+  for (var g = 0; g <= 4; g++) {
+    var y = padT + (H - padT - padB) * g / 4, val = max * (1 - g / 4);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText("¥" + (val / 1000) + "k", padL - 6, y + 4);
+  }
+  var cw = (W - padL - padR) / labels.length;
+  labels.forEach(function (lb, i) {
+    var h = (H - padT - padB) * vals[i] / max, bw = Math.min(30, cw - 16);
+    ctx.fillStyle = "#0e7a5f";
+    ctx.fillRect(padL + i * cw + (cw - bw) / 2, H - padB - h, bw, h);
+    ctx.fillStyle = "#22302b"; ctx.textAlign = "center";
+    ctx.fillText(lb, padL + i * cw + cw / 2, H - 8);
+  });
+}
+var mode = "both";
+function renderYear() {
+  var months = effectiveMonths(); /* 11 月含用户账，其余为示例数 */
+  var labels = months.map(function (m) { return m.label; });
+  if (mode === "both") {
+    drawGroupedBars(document.getElementById("chart-year"), labels,
+      months.map(function (m) { return m.income; }),
+      months.map(function (m) { return m.expense; }), "收入", "支出");
+    document.getElementById("trend-legend").innerHTML =
+      "<span><i style=\"background:#0e7a5f\"></i>收入</span><span><i style=\"background:#e8960c\"></i>支出</span>";
+  } else {
+    drawSaveBars(document.getElementById("chart-year"), labels,
+      months.map(function (m) { return m.income - m.expense; }));
+    document.getElementById("trend-legend").innerHTML =
+      "<span><i style=\"background:#0e7a5f\"></i>每月结余（收入 − 支出）</span>";
+  }
+}
+window.addEventListener("DOMContentLoaded", function () {
+  var months = effectiveMonths();
+  var yi = 0, ye = 0;
+  months.forEach(function (m) { yi += m.income; ye += m.expense; });
+  document.getElementById("t-income").textContent = fmt(yi);
+  document.getElementById("t-expense").textContent = fmt(ye);
+  document.getElementById("t-save").textContent = fmt(yi - ye);
+  document.getElementById("trend-head").innerHTML =
+    "示例家庭账本（演示数据） · 11 个月一共攒下 <strong>" + fmt(yi - ye) + "</strong>，平均每月攒 " +
+    fmt(Math.round((yi - ye) / 11)) + "，平均储蓄率 " + ((yi - ye) / yi * 100).toFixed(1) + "%。";
+  var surplus = currentMonthlySurplus();
+  document.getElementById("trend-third").innerHTML =
+    "3️⃣ <strong>下月可冲：</strong>照本月结余 " + fmt(surplus) + "，12 月底全年结余将到约 " +
+    fmt(yi - ye + surplus) + "，旅行基金（还差 " + fmt(8000 - 5600) + "）12 月就能达成。";
+  document.querySelectorAll("#trend-mode button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      mode = b.getAttribute("data-m");
+      document.querySelectorAll("#trend-mode button").forEach(function (x) { x.classList.toggle("on", x === b); });
+      renderYear();
+    });
+  });
+  renderYear();
+  drawLine(document.getElementById("chart-rate"),
+    months.map(function (m) { return m.label; }),
+    months.map(function (m) { return +((m.income - m.expense) / m.income * 100).toFixed(1); }), "%");
+});
+</script>
+</body>
+</html>

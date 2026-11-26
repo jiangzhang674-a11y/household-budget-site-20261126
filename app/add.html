@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家计本 · 记一笔</title>
+<meta name="description" content="记一笔账：选日期、收支、分类，填金额就入账；账只存在你的浏览器里，随时可删可改。">
+<link rel="stylesheet" href="style.css">
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">🏠 家计本 <span>· 家庭记账</span></div>
+  <nav>
+    <a href="index.html">首页总览</a>
+    <a href="overview.html">月度收支</a>
+    <a href="categories.html">分类支出</a>
+    <a href="add.html">记一笔</a>
+    <a href="goals.html">储蓄目标</a>
+    <a href="trends.html">年度趋势</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>记一笔</h1>
+  <p class="small">示例家庭账本（演示数据） · 你记的账只保存在<strong>你自己的浏览器</strong>里（localStorage），不上传、不出站；记完后首页的本月合计、分类页的实际、月度页和年度趋势的 11 月一栏都会实时算上你记的账。</p>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>新记一笔</h2>
+      <form id="entry-form">
+        <div class="formgrid">
+          <div>
+            <label for="f-date">日期</label>
+            <input type="date" id="f-date" value="2026-11-26" min="2026-11-01" max="2026-11-30" required>
+          </div>
+          <div>
+            <label>类型</label>
+            <div class="seg" id="f-type" style="margin-top:4px">
+              <button type="button" data-t="expense" class="on">支出</button>
+              <button type="button" data-t="income">收入</button>
+            </div>
+          </div>
+          <div>
+            <label for="f-cat">分类</label>
+            <select id="f-cat"></select>
+          </div>
+          <div>
+            <label for="f-amount">金额（元）</label>
+            <input type="number" id="f-amount" min="0.01" max="1000000" step="0.01" placeholder="例如 128" required>
+          </div>
+        </div>
+        <label for="f-name">事项</label>
+        <input type="text" id="f-name" maxlength="30" placeholder="例如：超市买菜" required>
+        <p id="form-msg" class="small" style="min-height:20px;margin-top:10px"></p>
+        <div class="btnrow">
+          <button class="btn" type="submit">记下来</button>
+          <button class="btn ghost" type="reset" id="f-reset">清空</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>本月你记的账</h2>
+      <p class="small" id="my-summary">你还没有记账。示例流水 40 笔不受影响，只展示你自己记的。</p>
+      <table>
+        <thead><tr><th>日期</th><th>事项</th><th>分类</th><th class="num">金额</th><th></th></tr></thead>
+        <tbody id="my-list"></tbody>
+      </table>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn ghost small" id="clear-mine" type="button">清空我记的账</button>
+        <a class="btn ghost small" href="index.html">回首页看合计</a>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>完整账本 · 2026年11月（示例流水 + 你记的账）</h2>
+    <div class="btnrow" style="margin-bottom:10px">
+      <span style="font-weight:700">筛选：</span>
+      <div class="seg" id="list-filter">
+        <button type="button" data-f="all" class="on">全部</button>
+        <button type="button" data-f="expense">只看支出</button>
+        <button type="button" data-f="income">只看收入</button>
+      </div>
+      <span class="small" id="list-count"></span>
+    </div>
+    <table>
+      <thead><tr><th>日期</th><th>事项</th><th>分类</th><th class="num">金额</th></tr></thead>
+      <tbody id="full-list"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer><nav>
+  <a href="index.html">首页总览</a><a href="overview.html">月度收支</a><a href="categories.html">分类支出</a><a href="add.html">记一笔</a><a href="goals.html">储蓄目标</a><a href="trends.html">年度趋势</a>
+</nav><p>家计本 · 纯静态家庭记账站 · 数据仅存本地 · 示例账本仅供演示</p></footer>
+
+<script>
+/* 记一笔页的本地逻辑：表单、自己记的账列表、完整账本三块。
+   注意日期只认 2026-11-01 到 2026-11-30，超出这个月的账不往里记；
+   收入只有“收入”一个分类，支出才按 11 类分。 */
+let pickedType = "expense";
+let pickedFilter = "all";
+
+const $ = function (id) { return document.getElementById(id); };
+
+function byDateDesc(a, b) {
+  if (a.date === b.date) return 0;
+  return a.date < b.date ? 1 : -1;
+}
+
+function rebuildCatSelect() {
+  const sel = $("f-cat");
+  if (pickedType === "income") {
+    sel.innerHTML = `<option value="income">收入</option>`;
+    return;
+  }
+  sel.innerHTML = SAMPLE.categories
+    .map((c) => `<option value="${c.key}">${c.name}</option>`)
+    .join("");
+}
+
+function netText(income, expense) {
+  const net = income - expense;
+  return net >= 0 ? fmt(net) : "−¥" + Math.abs(net).toLocaleString("zh-CN");
+}
+
+function refreshMyEntries() {
+  const mine = loadUserEntries();
+  let inc = 0, exp = 0;
+  mine.forEach((e) => { if (e.type === "income") inc += e.amount; else exp += e.amount; });
+  $("my-summary").textContent = mine.length
+    ? `你记了 ${mine.length} 笔：收入 ${fmt(inc)}，支出 ${fmt(exp)}，净影响结余 ${netText(inc, exp)}。`
+    : "你还没有记账。示例流水 40 笔不受影响，只展示你自己记的。";
+  const indexed = mine.map((e, i) => ({ e, i })).sort((a, b) => byDateDesc(a.e, b.e));
+  $("my-list").innerHTML = mine.length
+    ? indexed.map((o) => {
+        const e = o.e;
+        const isIncome = e.type === "income";
+        return `<tr><td>${e.date.slice(5)}</td><td>${e.name}</td><td>${catName(e.cat)}</td>` +
+          `<td class="num ${isIncome ? "pos" : "neg"}">${isIncome ? "+" : "−"}${fmt(e.amount)}</td>` +
+          `<td><button class="btn danger" data-i="${o.i}">删除</button></td></tr>`;
+      }).join("")
+    : `<tr><td colspan="5" class="small">暂无，快在左边记第一笔吧。</td></tr>`;
+  document.querySelectorAll("#my-list .btn.danger").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const list = loadUserEntries();
+      list.splice(parseInt(btn.getAttribute("data-i"), 10), 1);
+      saveUserEntries(list);
+      refreshMyEntries();
+      refreshFullLedger();
+    });
+  });
+}
+
+function refreshFullLedger() {
+  let list = allTransactions().slice().sort(byDateDesc);
+  if (pickedFilter !== "all") list = list.filter((t) => t.type === pickedFilter);
+  $("list-count").textContent = `共 ${list.length} 笔`;
+  $("full-list").innerHTML = txRows(list);
+}
+
+function markOn(groupSelector, activeBtn) {
+  document.querySelectorAll(groupSelector).forEach((x) => x.classList.toggle("on", x === activeBtn));
+}
+
+function submitEntry(ev) {
+  ev.preventDefault();
+  const amount = parseFloat($("f-amount").value);
+  const name = $("f-name").value.trim();
+  const msg = $("form-msg");
+  if (!name || !(amount > 0)) {
+    msg.textContent = "请把事项和金额都填好，金额要大于 0。";
+    return;
+  }
+  const list = loadUserEntries();
+  list.push({
+    date: $("f-date").value,
+    type: pickedType,
+    cat: $("f-cat").value,
+    name: name,
+    amount: Math.round(amount * 100) / 100,
+  });
+  saveUserEntries(list);
+  msg.textContent = `✓ 已记下：${name} ${fmt(amount)}。首页、分类页、月度页的合计已同步更新。`;
+  $("f-amount").value = "";
+  $("f-name").value = "";
+  refreshMyEntries();
+  refreshFullLedger();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  rebuildCatSelect();
+  document.querySelectorAll("#f-type button").forEach((b) => {
+    b.addEventListener("click", () => {
+      pickedType = b.getAttribute("data-t");
+      markOn("#f-type button", b);
+      rebuildCatSelect();
+    });
+  });
+  document.querySelectorAll("#list-filter button").forEach((b) => {
+    b.addEventListener("click", () => {
+      pickedFilter = b.getAttribute("data-f");
+      markOn("#list-filter button", b);
+      refreshFullLedger();
+    });
+  });
+  $("entry-form").addEventListener("submit", submitEntry);
+  $("f-reset").addEventListener("click", () => { $("form-msg").textContent = ""; });
+  $("clear-mine").addEventListener("click", () => {
+    if (!loadUserEntries().length) return;
+    saveUserEntries([]);
+    refreshMyEntries();
+    refreshFullLedger();
+    $("form-msg").textContent = "已清空你记的账，示例流水不受影响。";
+  });
+  refreshMyEntries();
+  refreshFullLedger();
+});
+</script>
+</body>
+</html>

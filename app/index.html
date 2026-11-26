@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家计本 · 家庭记账 — 首页</title>
+<meta name="description" content="家计本：一个普通中国家庭的记账本。月度收支总览、分类支出、记账录入、储蓄目标、年度趋势，全部离线可用。">
+<link rel="stylesheet" href="style.css">
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">🏠 家计本 <span>· 家庭记账</span></div>
+  <nav>
+    <a href="index.html">首页总览</a>
+    <a href="overview.html">月度收支</a>
+    <a href="categories.html">分类支出</a>
+    <a href="add.html">记一笔</a>
+    <a href="goals.html">储蓄目标</a>
+    <a href="trends.html">年度趋势</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="month">示例家庭账本（演示数据） · 三口之家（夫妻 + 一名小学生）· 2026年11月</div>
+    <h1>这个月，家里一共攒下 ¥6,500</h1>
+    <p>收入 ¥20,200，支出 ¥13,700，储蓄率 32.2%。每一笔都对得上账，下面是这个月的全貌。</p>
+  </section>
+
+  <div class="notice">📌 本站数字为<strong>示例家庭账本（演示数据）</strong>，用来展示记账、统计与储蓄工具怎么用。你在「记一笔」里记的账只保存在你自己的浏览器里（localStorage），不会上传到任何地方；记完后首页、分类页、月度页的数字都会一起变。</div>
+
+  <section class="kpis">
+    <div class="kpi good"><div class="label">本月收入</div><div class="value num" id="kpi-income">¥20,200</div><div class="sub">工资 ¥18,500 · 副业 ¥1,200</div></div>
+    <div class="kpi"><div class="label">本月支出</div><div class="value num" id="kpi-expense">¥13,700</div><div class="sub">11 类支出，住房占最大头</div></div>
+    <div class="kpi good"><div class="label">本月结余</div><div class="value num" id="kpi-save">¥6,500</div><div class="sub" id="kpi-save-sub">收入 − 支出，全部可存起来</div></div>
+    <div class="kpi warn"><div class="label">储蓄率</div><div class="value num" id="kpi-rate">32.2%</div><div class="sub">目标：每月至少存下 30%</div></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>近 6 个月收支对比 <a class="more" href="overview.html">看月度收支 →</a></h2>
+      <canvas id="chart-months" class="chart" role="img" aria-label="近6个月收入与支出对比柱状图"></canvas>
+      <div class="legend"><span><i style="background:#0e7a5f"></i>收入</span><span><i style="background:#e8960c"></i>支出</span></div>
+      <p class="small">7 月支出 ¥14,200 是暑假出游与课外班，6–11 月每月结余都在 ¥6,000 以上。</p>
+    </section>
+    <section class="card">
+      <h2>11 月钱花在哪了 <a class="more" href="categories.html">看分类支出 →</a></h2>
+      <div class="donut-wrap"><div id="donut"></div>
+        <div style="flex:1;min-width:150px">
+          <p id="donut-note"><strong>住房 ¥4,200</strong> 占 30.7%，是最大的一笔。</p>
+          <p><strong>食品餐饮 ¥3,100</strong> 占 22.6%，买菜为主。</p>
+          <p><strong>医疗 ¥620</strong>、<strong>娱乐 ¥640</strong> 本月都超了预算，见分类页红标。</p>
+          <p class="small">环形图与分类页用同一份数字：示例实际 + 你记的账。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>最近 8 笔流水 <a class="more" href="add.html">去记一笔 →</a></h2>
+    <table>
+      <thead><tr><th>日期</th><th>事项</th><th>分类</th><th class="num">金额</th></tr></thead>
+      <tbody id="recent"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>常用工具</h2>
+    <div class="btnrow">
+      <a class="btn" href="add.html">＋ 记一笔账</a>
+      <a class="btn ghost" href="categories.html">查哪类花超了</a>
+      <a class="btn ghost" href="goals.html">算多久攒够目标</a>
+      <a class="btn ghost" href="trends.html">看全年攒了多少</a>
+    </div>
+    <p class="small" style="margin-top:12px" id="year-line">全年 1–11 月：收入 ¥221,200，支出 ¥149,600，已攒 ¥71,600。详情见「年度趋势」。</p>
+  </section>
+</main>
+
+<footer><nav>
+  <a href="index.html">首页总览</a><a href="overview.html">月度收支</a><a href="categories.html">分类支出</a><a href="add.html">记一笔</a><a href="goals.html">储蓄目标</a><a href="trends.html">年度趋势</a>
+</nav><p>家计本 · 纯静态家庭记账站 · 数据仅存本地 · 示例账本仅供演示</p></footer>
+
+<script>
+window.addEventListener("DOMContentLoaded", function () {
+  /* KPI：示例数 + 用户自己记的 11 月账（与分类页、月度页同一口径） */
+  var t = effectiveMonthTotals("2026-11");
+  var save = t.income - t.expense;
+  document.getElementById("kpi-income").textContent = fmt(t.income);
+  document.getElementById("kpi-expense").textContent = fmt(t.expense);
+  document.getElementById("kpi-save").textContent = fmt(save);
+  document.getElementById("kpi-rate").textContent = (save / t.income * 100).toFixed(1) + "%";
+  document.getElementById("kpi-save-sub").textContent =
+    (t.userIncome + t.userExpense > 0)
+      ? "含你记的账：收入 +" + fmt(t.userIncome) + "，支出 +" + fmt(t.userExpense)
+      : "收入 − 支出，全部可存起来";
+  document.querySelector(".hero h1").textContent = "这个月，家里一共攒下 " + fmt(save);
+
+  /* 近 6 个月：11 月一栏同样含用户账，其余月份是示例数 */
+  var eff = effectiveMonths(), last6 = eff.slice(-6);
+  drawGroupedBars(document.getElementById("chart-months"),
+    last6.map(function (m) { return m.label; }),
+    last6.map(function (m) { return m.income; }),
+    last6.map(function (m) { return m.expense; }), "收入", "支出");
+
+  /* 环形图：合并后的分类实际，与分类页同一份数字 */
+  var cats = effectiveCategories("2026-11");
+  document.getElementById("donut").innerHTML = donutSVG(
+    cats.map(function (c) { return { value: c.actual, color: c.color }; }), 200);
+  var top = cats[0];
+  document.getElementById("donut-note").innerHTML =
+    "<strong>住房 " + fmt(top.actual) + "</strong> 占 " + (top.actual / t.expense * 100).toFixed(1) + "%，是最大的一笔。";
+
+  var rows = allTransactions().slice().sort(function (a, b) { return b.date < a.date ? -1 : 1; }).slice(0, 8);
+  document.getElementById("recent").innerHTML = txRows(rows);
+
+  /* 全年行：11 月含用户账 */
+  var yi = 0, ye = 0;
+  eff.forEach(function (m) { yi += m.income; ye += m.expense; });
+  document.getElementById("year-line").textContent =
+    "全年 1–11 月：收入 " + fmt(yi) + "，支出 " + fmt(ye) + "，已攒 " + fmt(yi - ye) + "。详情见「年度趋势」。";
+});
+</script>
+</body>
+</html>

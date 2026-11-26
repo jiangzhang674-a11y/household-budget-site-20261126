@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家计本 · 月度收支总览</title>
+<meta name="description" content="按月查看家庭收入、支出与结余，1–11 月逐月切换，每月收支明细完整可查。">
+<link rel="stylesheet" href="style.css">
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">🏠 家计本 <span>· 家庭记账</span></div>
+  <nav>
+    <a href="index.html">首页总览</a>
+    <a href="overview.html">月度收支</a>
+    <a href="categories.html">分类支出</a>
+    <a href="add.html">记一笔</a>
+    <a href="goals.html">储蓄目标</a>
+    <a href="trends.html">年度趋势</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>月度收支总览</h1>
+  <p class="small">示例家庭账本（演示数据） · 选一个月，看当月收入从哪来、支出到哪去、攒下多少。11 月的数字含你在「记一笔」里记的账，与首页、分类页同一口径；其余月份是示例数。</p>
+
+  <div class="btnrow" style="margin-bottom:16px">
+    <span style="font-weight:700">月份：</span>
+    <div class="seg" id="month-seg">
+      <button data-m="2026-09">2026年9月</button>
+      <button data-m="2026-10">2026年10月</button>
+      <button data-m="2026-11" class="on">2026年11月</button>
+    </div>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi good"><div class="label">月收入</div><div class="value num" id="ov-income">¥20,200</div><div class="sub" id="ov-income-sub">工资 ¥18,500 · 副业 ¥1,200</div></div>
+    <div class="kpi"><div class="label">月支出</div><div class="value num" id="ov-expense">¥13,700</div><div class="sub">11 类支出合计</div></div>
+    <div class="kpi good"><div class="label">月结余</div><div class="value num" id="ov-save">¥6,500</div><div class="sub" id="ov-save-sub">可全部转入储蓄</div></div>
+    <div class="kpi warn"><div class="label">储蓄率</div><div class="value num" id="ov-rate">32.2%</div><div class="sub">目标：每月至少 30%</div></div>
+  </section>
+
+  <div class="grid2eq">
+    <section class="card">
+      <h2>收入从哪来</h2>
+      <table><thead><tr><th>来源</th><th class="num">金额</th><th class="num">占比</th></tr></thead>
+      <tbody id="inc-table"></tbody></table>
+    </section>
+    <section class="card">
+      <h2>支出到哪去（前 5 类）</h2>
+      <table><thead><tr><th>分类</th><th class="num">金额</th><th class="num">占比</th></tr></thead>
+      <tbody id="exp-table"></tbody></table>
+      <p class="small"><a href="categories.html">看全部 11 类支出与预算对照 →</a></p>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>本月手记</h2>
+    <p id="month-note">11 月：牙科检查花了 ¥440，医疗超预算 ¥120；家庭聚餐 ¥520 是一次性开销。下月注意控制外出就餐。</p>
+    <p class="small" id="month-note-2">11 月逐笔流水共 40 笔（示例），见首页「最近流水」与「记一笔」页的完整账本。</p>
+    <div class="btnrow"><a class="btn small" href="add.html">记一笔账</a><a class="btn ghost small" href="trends.html">看全年趋势</a></div>
+  </section>
+
+  <section class="card">
+    <h2>2026 年 1–11 月逐月结余 <span class="small">点一行，切换到那个月</span></h2>
+    <table>
+      <thead><tr><th>月份</th><th class="num">收入</th><th class="num">支出</th><th class="num">结余</th><th class="num">储蓄率</th></tr></thead>
+      <tbody id="year-table"></tbody>
+    </table>
+    <p class="small" id="year-total">全年合计：收入 ¥221,200，支出 ¥149,600，结余 ¥71,600，平均储蓄率 32.4%。</p>
+  </section>
+</main>
+
+<footer><nav>
+  <a href="index.html">首页总览</a><a href="overview.html">月度收支</a><a href="categories.html">分类支出</a><a href="add.html">记一笔</a><a href="goals.html">储蓄目标</a><a href="trends.html">年度趋势</a>
+</nav><p>家计本 · 纯静态家庭记账站 · 数据仅存本地 · 示例账本仅供演示</p></footer>
+
+<script>
+/* 9–11 月有逐笔手记的完整明细；1–8 月只有月度合计是示例账本原数，
+   分类明细按 11 月的结构同比例分摊（四舍五入后差额进“其他”，合计分毫不差），
+   仅供看结构参考，不当逐笔账。 */
+var MONTH_DETAIL = {
+  "2026-09": {
+    income: [["工资", 18500], ["副业兼职", 900], ["理财收益", 310], ["其他收入", 290]],
+    cats: [["住房", 4200], ["食品餐饮", 2950], ["交通出行", 940], ["教育", 1750], ["医疗健康", 480], ["日用百货", 720], ["通讯", 298], ["娱乐休闲", 520], ["服装", 380], ["人情往来", 700], ["其他", 362]],
+    note: "9 月：开学季，教育支出 ¥1,750；中秋给双方父母各包了红包，人情往来 ¥700 是三个月里最高的。"
+  },
+  "2026-10": {
+    income: [["工资", 18500], ["副业兼职", 1100], ["理财收益", 330], ["其他收入", 270]],
+    cats: [["住房", 4200], ["食品餐饮", 3050], ["交通出行", 960], ["教育", 1800], ["医疗健康", 540], ["日用百货", 760], ["通讯", 298], ["娱乐休闲", 580], ["服装", 450], ["人情往来", 500], ["其他", 362]],
+    note: "10 月：国庆假期短途出游，娱乐 ¥580；换季给孩子添了秋装，服装 ¥450。结余 ¥6,700，达标。"
+  },
+  "2026-11": {
+    income: [["工资", 18500], ["副业兼职", 1200], ["理财收益", 320], ["其他收入", 180]],
+    cats: [["住房", 4200], ["食品餐饮", 3100], ["交通出行", 980], ["教育", 1850], ["医疗健康", 620], ["日用百货", 750], ["通讯", 298], ["娱乐休闲", 640], ["服装", 420], ["人情往来", 500], ["其他", 342]],
+    note: "11 月：牙科检查花了 ¥440，医疗超预算 ¥120；家庭聚餐 ¥520 是一次性开销。下月注意控制外出就餐。"
+  }
+};
+function derivedDetail(m) {
+  var row = SAMPLE.months.filter(function (x) { return x.m === m; })[0];
+  if (!row) return null;
+  var base = MONTH_DETAIL["2026-11"];
+  var ratio = row.expense / 13700;
+  var cats = base.cats.map(function (c) { return [c[0], Math.round(c[1] * ratio)]; });
+  var sum = 0; cats.forEach(function (c) { sum += c[1]; });
+  cats[cats.length - 1][1] += row.expense - sum; /* 差额进“其他”，合计分毫不差 */
+  var rest = row.income - 18500;
+  var income = [["工资", 18500], ["副业兼职", Math.round(rest * 0.7)],
+    ["理财收益", Math.round(rest * 0.2)], ["其他收入", rest - Math.round(rest * 0.7) - Math.round(rest * 0.2)]];
+  return { income: income, cats: cats,
+    note: row.label + "：月度合计为示例账本原数（收入 " + fmt(row.income) + "、支出 " +
+      fmt(row.expense) + "）；分类明细按 11 月结构同比例分摊，仅供看结构参考，不当逐笔账。" };
+}
+function monthDetail(m) { return MONTH_DETAIL[m] || derivedDetail(m); }
+
+var currentMonth = "2026-11";
+function showMonth(m) {
+  currentMonth = m;
+  var d = monthDetail(m), inc = 0, exp = 0;
+  d.income.forEach(function (x) { inc += x[1]; });
+  d.cats.forEach(function (x) { exp += x[1]; });
+  /* 11 月：把用户自己记的账算进来，与首页、分类页同一口径 */
+  var userNote = "";
+  var cats = d.cats;
+  var incRows = d.income;
+  if (m === "2026-11") {
+    var u = userMonthTotals("2026-11");
+    inc += u.income; exp += u.expense;
+    /* 前 5 类表也要并入用户账：userCatTotals 按分类 key（如 food）汇总，
+       d.cats 用中文名，经 SAMPLE.categories 由名查 key 再并入对应分类。
+       用局部 cats，不改 MONTH_DETAIL 原表，避免重复切换月份时重复累加。 */
+    var uc = userCatTotals("2026-11");
+    cats = d.cats.map(function (c) {
+      var key = (SAMPLE.categories.filter(function (x) { return x.name === c[0]; })[0] || {}).key;
+      return [c[0], c[1] + (uc[key] || 0)];
+    });
+    if (u.income + u.expense > 0) {
+      userNote = "（含你记的账：收入 +" + fmt(u.income) + "，支出 +" + fmt(u.expense) + "）";
+      /* 只用局部 incRows，不写回 d.income，避免重复调 showMonth 时重复累加；
+         只有真有收入账时才加“你记的收入”行，纯支出时不加 ¥0 收入行。 */
+      if (u.income > 0) incRows = d.income.concat([["你记的收入", u.income]]);
+    }
+  }
+  var save = inc - exp;
+  document.getElementById("ov-income").textContent = fmt(inc);
+  document.getElementById("ov-expense").textContent = fmt(exp);
+  document.getElementById("ov-save").textContent = fmt(save);
+  document.getElementById("ov-rate").textContent = (save / inc * 100).toFixed(1) + "%";
+  document.getElementById("ov-income-sub").textContent =
+    "工资 ¥18,500 · 副业 ¥" + d.income[1][1].toLocaleString("zh-CN") + userNote;
+  document.getElementById("ov-save-sub").textContent = save >= 6000 ? "可全部转入储蓄" : "低于 6,000 元目标，见储蓄目标页";
+  document.getElementById("inc-table").innerHTML = incRows.filter(function (x) { return x[1] > 0; }).map(function (x) {
+    return "<tr><td>" + x[0] + "</td><td class=\"num pos\">" + fmt(x[1]) + "</td><td class=\"num\">" + (x[1] / inc * 100).toFixed(1) + "%</td></tr>";
+  }).join("");
+  var top = cats.slice().sort(function (a, b) { return b[1] - a[1]; }).slice(0, 5);
+  document.getElementById("exp-table").innerHTML = top.map(function (x) {
+    return "<tr><td>" + x[0] + "</td><td class=\"num\">" + fmt(x[1]) + "</td><td class=\"num\">" + (x[1] / exp * 100).toFixed(1) + "%</td></tr>";
+  }).join("");
+  document.getElementById("month-note").textContent = d.note + (m === "2026-11" && userNote ? " " + userNote + "。" : "");
+  document.getElementById("month-note-2").textContent =
+    m === "2026-11" ? "11 月逐笔流水共 40 笔（示例）+ 你记的账，见首页「最近流水」与「记一笔」页的完整账本。"
+      : "该月无逐笔流水，只有月度合计与分摊的分类结构；逐笔账只保留了 9–11 月的手记。";
+  document.querySelectorAll("#month-seg button").forEach(function (b) {
+    b.classList.toggle("on", b.getAttribute("data-m") === m);
+  });
+  document.querySelectorAll("#year-table tr").forEach(function (tr) {
+    tr.classList.toggle("sel", tr.getAttribute("data-m") === m);
+  });
+}
+function renderYearTable() {
+  var eff = effectiveMonths();
+  document.getElementById("year-table").innerHTML = eff.map(function (m) {
+    var s = m.income - m.expense;
+    return "<tr class=\"clickable\" data-m=\"" + m.m + "\"><td>" + m.label + "</td><td class=\"num\">" + fmt(m.income) +
+      "</td><td class=\"num\">" + fmt(m.expense) + "</td><td class=\"num pos\">" + fmt(s) +
+      "</td><td class=\"num\">" + (s / m.income * 100).toFixed(1) + "%</td></tr>";
+  }).join("");
+  document.querySelectorAll("#year-table tr").forEach(function (tr) {
+    tr.addEventListener("click", function () {
+      showMonth(tr.getAttribute("data-m"));
+      document.querySelector(".kpis").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  });
+  var yi = 0, ye = 0;
+  eff.forEach(function (m) { yi += m.income; ye += m.expense; });
+  document.getElementById("year-total").textContent =
+    "全年合计：收入 " + fmt(yi) + "，支出 " + fmt(ye) + "，结余 " + fmt(yi - ye) +
+    "，平均储蓄率 " + ((yi - ye) / yi * 100).toFixed(1) + "%" +
+    (yi !== 221200 || ye !== 149600 ? "（11 月含你记的账）" : "") + "。";
+}
+window.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("#month-seg button").forEach(function (b) {
+    b.addEventListener("click", function () { showMonth(b.getAttribute("data-m")); });
+  });
+  renderYearTable();
+  showMonth("2026-11");
+});
+</script>
+</body>
+</html>

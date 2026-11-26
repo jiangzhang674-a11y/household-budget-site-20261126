@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家计本 · 分类支出</title>
+<meta name="description" content="11 类支出逐项对照预算：哪类超了、超多少、钱花在哪些笔上，点分类看明细。">
+<link rel="stylesheet" href="style.css">
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">🏠 家计本 <span>· 家庭记账</span></div>
+  <nav>
+    <a href="index.html">首页总览</a>
+    <a href="overview.html">月度收支</a>
+    <a href="categories.html">分类支出</a>
+    <a href="add.html">记一笔</a>
+    <a href="goals.html">储蓄目标</a>
+    <a href="trends.html">年度趋势</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>分类支出 · 2026年11月</h1>
+  <p class="small" id="cat-head">示例家庭账本（演示数据） · 预算合计 ¥14,100，实际支出 ¥13,700，省下 ¥400。点一行，看这个分类的每一笔明细。</p>
+  <p class="small">这里的“实际”= 示例实际 + 你在「记一笔」里记的本月支出，和首页环形图、月度页是同一份数字；没有记账时就是示例数本身。</p>
+
+  <div class="chips" id="filter" style="margin-bottom:16px">
+    <button class="chip on" data-f="all">全部 11 类</button>
+    <button class="chip" data-f="need">必要开销</button>
+    <button class="chip" data-f="opt">可选开销</button>
+    <button class="chip" data-f="over">只看超预算</button>
+  </div>
+
+  <section class="card">
+    <h2>各分类支出（点下方表格行看明细）</h2>
+    <canvas id="chart-cats" class="chart" role="img" aria-label="各分类支出横向条形图"></canvas>
+  </section>
+
+  <section class="card">
+    <h2>预算对照表 <span class="small" id="cat-count"></span></h2>
+    <table>
+      <thead><tr><th>分类</th><th class="num">预算</th><th class="num">实际</th><th class="num">差额</th><th>状态</th></tr></thead>
+      <tbody id="cat-table"></tbody>
+    </table>
+  </section>
+
+  <section class="card" id="detail-card">
+    <h2 id="detail-title">住房 · 明细</h2>
+    <p class="small" id="detail-sub">预算 ¥4,200，实际 ¥4,200，不超不省，正好花完。</p>
+    <table>
+      <thead><tr><th>日期</th><th>事项</th><th class="num">金额</th></tr></thead>
+      <tbody id="detail-rows"></tbody>
+    </table>
+    <div class="btnrow" style="margin-top:12px"><a class="btn small" href="add.html">给这个分类记一笔</a></div>
+  </section>
+
+  <div class="notice">💡 本月提醒：<strong>医疗健康</strong>超预算 ¥120（牙科检查 ¥440），<strong>娱乐休闲</strong>超预算 ¥40（家庭出游 ¥475）。两项合计超 ¥160，下月可从娱乐预算里先扣回。</div>
+</main>
+
+<footer><nav>
+  <a href="index.html">首页总览</a><a href="overview.html">月度收支</a><a href="categories.html">分类支出</a><a href="add.html">记一笔</a><a href="goals.html">储蓄目标</a><a href="trends.html">年度趋势</a>
+</nav><p>家计本 · 纯静态家庭记账站 · 数据仅存本地 · 示例账本仅供演示</p></footer>
+
+<script>
+var currentFilter = "all";
+function filteredCats() {
+  return effectiveCategories("2026-11").filter(function (c) {
+    if (currentFilter === "need") return c.need;
+    if (currentFilter === "opt") return !c.need;
+    if (currentFilter === "over") return c.actual > c.budget;
+    return true;
+  });
+}
+function renderCats() {
+  var list = filteredCats();
+  var all = effectiveCategories("2026-11");
+  var exp = 0, userExp = 0;
+  all.forEach(function (c) { exp += c.actual; userExp += c.userActual; });
+  document.getElementById("cat-head").textContent =
+    "示例家庭账本（演示数据） · 预算合计 " + fmt(totalBudget()) + "，实际支出 " + fmt(exp) +
+    "，" + (exp <= totalBudget() ? "省下 " + fmt(totalBudget() - exp) : "超支 " + fmt(exp - totalBudget())) +
+    (userExp > 0 ? "（含你记的账 " + fmt(userExp) + "）" : "") + "。点一行，看这个分类的每一笔明细。";
+  document.getElementById("cat-count").textContent = "共 " + list.length + " 类";
+  drawHbars(document.getElementById("chart-cats"),
+    list.map(function (c) { return { label: c.name, value: c.actual, color: c.color }; }));
+  document.getElementById("cat-table").innerHTML = list.map(function (c) {
+    var d = c.actual - c.budget, over = d > 0;
+    return "<tr data-key=\"" + c.key + "\" style=\"cursor:pointer\"><td><strong>" + c.name + "</strong>" +
+      (c.need ? "" : " <span class=\"small\">可选</span>") +
+      (c.userActual > 0 ? " <span class=\"small\">含你记的 " + fmt(c.userActual) + "</span>" : "") +
+      "</td><td class=\"num\">" + fmt(c.budget) +
+      "</td><td class=\"num\">" + fmt(c.actual) + "</td><td class=\"num " + (over ? "neg" : "pos") + "\">" +
+      (over ? "+" : d < 0 ? "−" : "") + "¥" + Math.abs(d).toLocaleString("zh-CN") + "</td><td>" +
+      (over ? "<span class=\"tag over\">超支 ¥" + d + "</span>" : "<span class=\"tag\">在预算内</span>") + "</td></tr>";
+  }).join("");
+  document.querySelectorAll("#cat-table tr").forEach(function (tr) {
+    tr.addEventListener("click", function () { showDetail(tr.getAttribute("data-key"), true); });
+  });
+}
+function showDetail(key, scroll) {
+  var c = effectiveCategories("2026-11").filter(function (x) { return x.key === key; })[0];
+  if (!c) return;
+  var d = c.actual - c.budget;
+  document.getElementById("detail-title").textContent = c.name + " · 明细";
+  document.getElementById("detail-sub").textContent = "预算 " + fmt(c.budget) + "，实际 " + fmt(c.actual) +
+    "（示例 " + fmt(c.sampleActual) + (c.userActual > 0 ? " + 你记的 " + fmt(c.userActual) : "") + "），" +
+    (d > 0 ? "超支 " + fmt(d) + "。" : d < 0 ? "省下 " + fmt(-d) + "。" : "不超不省，正好花完。");
+  var rows = allTransactions().filter(function (t) { return t.cat === key; })
+    .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+  document.getElementById("detail-rows").innerHTML = rows.length ? rows.map(function (t) {
+    return "<tr><td>" + t.date.slice(5) + "</td><td>" + t.name + "</td><td class=\"num\">" + fmt(t.amount) + "</td></tr>";
+  }).join("") : "<tr><td colspan=\"3\" class=\"small\">这个分类本月还没有流水，去「记一笔」记第一笔。</td></tr>";
+  if (scroll) document.getElementById("detail-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+window.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("#filter .chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      currentFilter = b.getAttribute("data-f");
+      document.querySelectorAll("#filter .chip").forEach(function (x) { x.classList.toggle("on", x === b); });
+      renderCats();
+    });
+  });
+  renderCats();
+  showDetail("housing");
+});
+</script>
+</body>
+</html>

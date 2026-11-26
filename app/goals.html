@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家计本 · 储蓄目标</title>
+<meta name="description" content="四个储蓄目标的进度：应急基金、教育金、换车首付、旅行基金；算一算每月存多少、多久能攒够。">
+<link rel="stylesheet" href="style.css">
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+  <div class="brand">🏠 家计本 <span>· 家庭记账</span></div>
+  <nav>
+    <a href="index.html">首页总览</a>
+    <a href="overview.html">月度收支</a>
+    <a href="categories.html">分类支出</a>
+    <a href="add.html">记一笔</a>
+    <a href="goals.html">储蓄目标</a>
+    <a href="trends.html">年度趋势</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>储蓄目标</h1>
+  <p class="small" id="goals-head">示例家庭账本（演示数据） · 4 个目标合计 ¥168,000，已攒 ¥60,100。本月结余按现在的收支实时算，旅行基金最快达成。</p>
+
+  <section class="card">
+    <h2>目标进度 <span class="small">合计已攒 ¥60,100 / ¥168,000（35.8%）</span></h2>
+    <div id="goal-list"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>攒钱计算器</h2>
+      <p class="small" id="calc-base">每月能存的默认值，就是本月结余（收入 − 支出，含你记的账），不是写死的数。</p>
+      <div class="seg" id="calc-mode" style="margin-bottom:6px">
+        <button type="button" data-m="months" class="on">每月存多少 → 多久攒够</button>
+        <button type="button" data-m="amount">想几个月攒够 → 每月存多少</button>
+      </div>
+      <label for="c-target">目标金额（元）</label>
+      <input type="number" id="c-target" value="8000" min="100" step="100">
+      <label for="c-saved">已攒（元）</label>
+      <input type="number" id="c-saved" value="5600" min="0" step="100">
+      <label for="c-x" id="c-x-label">每月能存（元）</label>
+      <input type="number" id="c-x" min="1" step="100">
+      <p id="calc-out" class="notice green" style="margin-top:14px"></p>
+      <p class="small" id="calc-hint"></p>
+      <div class="btnrow"><button class="btn" id="c-run" type="button">算一算</button></div>
+    </section>
+
+    <section class="card">
+      <h2>立一个新目标</h2>
+      <label for="g-name">目标名字</label>
+      <input type="text" id="g-name" maxlength="20" placeholder="例如：换新冰箱">
+      <div class="formgrid">
+        <div><label for="g-target">目标金额（元）</label><input type="number" id="g-target" min="100" step="100" placeholder="例如 5000"></div>
+        <div><label for="g-saved">已攒（元）</label><input type="number" id="g-saved" min="0" step="100" value="0"></div>
+      </div>
+      <label for="g-note">备注（可选）</label>
+      <input type="text" id="g-note" maxlength="40" placeholder="例如：明年夏天前买好">
+      <p id="g-msg" class="small" style="min-height:20px;margin-top:10px"></p>
+      <div class="btnrow"><button class="btn" id="g-add" type="button">立下目标</button></div>
+      <p class="small">新目标只存在你的浏览器里，刷新还在；示例的 4 个目标不受影响。立下后输入框会清空，方便接着立下一个。</p>
+    </section>
+  </div>
+</main>
+
+<footer><nav>
+  <a href="index.html">首页总览</a><a href="overview.html">月度收支</a><a href="categories.html">分类支出</a><a href="add.html">记一笔</a><a href="goals.html">储蓄目标</a><a href="trends.html">年度趋势</a>
+</nav><p>家计本 · 纯静态家庭记账站 · 数据仅存本地 · 示例账本仅供演示</p></footer>
+
+<script>
+/* 储蓄目标页：示例的 4 个目标是死的（存在 data.js 里），自己立的目标
+   存在浏览器本地；两拨目标拼在一起展示。
+   一条硬规矩：本月结余 ≤ 0 时，到处都只写“本月结余不足”，不做除法——
+   结余是 0 或负数时算“几个月攒够”会得出 Infinity 或负数，那是错的。 */
+const GOAL_KEY = "jiajiben-goals-v1";
+let calcMode = "months";
+
+const $ = (id) => document.getElementById(id);
+
+function readCustomGoals() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GOAL_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+function combinedGoals() {
+  return SAMPLE.goals.concat(readCustomGoals());
+}
+
+/* 某个目标离达成还有几个月：已达成是 0，结余不足时不算、返回 null。 */
+function monthsToFinish(goal, surplus) {
+  const left = goal.target - goal.saved;
+  if (left <= 0) return 0;
+  if (surplus <= 0) return null;
+  return Math.ceil(left / surplus);
+}
+
+function paintGoalList() {
+  const surplus = currentMonthlySurplus();
+  const list = combinedGoals();
+  $("goals-head").textContent =
+    `示例家庭账本（演示数据） · 4 个示例目标合计 ¥168,000，已攒 ¥60,100。本月结余 ${fmt(surplus)}（收入 − 支出，含你记的账），旅行基金最快达成。`;
+  $("goal-list").innerHTML = list.map((g, i) => {
+    const pct = Math.min(100, (g.saved / g.target) * 100);
+    const left = g.target - g.saved;
+    const months = monthsToFinish(g, surplus);
+    let tail;
+    if (left <= 0) tail = " · 已达成 🎉";
+    else if (months === null) tail = " · 本月结余不足";
+    else tail = ` · 按每月存 ${fmt(surplus)}，约 ${months} 个月达成`;
+    const mine = i >= SAMPLE.goals.length;
+    return `<div class="goal"><div class="g-head"><span>${g.name}</span><span class="num">${pct.toFixed(1)}%</span></div>` +
+      `<div class="g-num">已攒 ${fmt(g.saved)} / 目标 ${fmt(g.target)} · 还差 ${fmt(Math.max(0, left))}${tail}</div>` +
+      `<div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>` +
+      `<div class="small" style="margin-top:6px">${g.note || ""}${mine ? ` <button class="btn danger" data-gi="${i}">删除</button>` : ""}</div></div>`;
+  }).join("");
+  document.querySelectorAll("#goal-list .btn.danger").forEach((b) => {
+    b.addEventListener("click", () => {
+      const mine = readCustomGoals();
+      mine.splice(parseInt(b.getAttribute("data-gi"), 10) - SAMPLE.goals.length, 1);
+      localStorage.setItem(GOAL_KEY, JSON.stringify(mine));
+      paintGoalList();
+    });
+  });
+}
+
+/* 计算器下方那行小字：结余不足时只写一句话，不算任何“约几个月”。 */
+function refreshCalcHint(surplus) {
+  if (surplus <= 0) {
+    $("calc-hint").textContent = "本月结余不足";
+    return;
+  }
+  const first = SAMPLE.goals[0];
+  const third = SAMPLE.goals[2];
+  $("calc-hint").textContent =
+    `按本月结余 ${fmt(surplus)} 算：${first.name}还差 ${fmt(first.target - first.saved)}，约 ` +
+    `${Math.ceil((first.target - first.saved) / surplus)} 个月；${third.name}还差 ${fmt(third.target - third.saved)}，约 ` +
+    `${Math.ceil((third.target - third.saved) / surplus)} 个月。`;
+}
+
+function runCalculator() {
+  const surplus = currentMonthlySurplus();
+  const target = parseFloat($("c-target").value) || 0;
+  const saved = parseFloat($("c-saved").value) || 0;
+  const x = parseFloat($("c-x").value) || 0;
+  const out = $("calc-out");
+  if (target <= 0) {
+    out.textContent = "请先填目标金额。";
+    refreshCalcHint(surplus);
+    return;
+  }
+  if (saved >= target) {
+    out.textContent = `🎉 已攒够 ${fmt(target)}，目标达成！`;
+    refreshCalcHint(surplus);
+    return;
+  }
+  const left = target - saved;
+  if (calcMode === "months") {
+    if (x <= 0) {
+      out.textContent = "每月能存的金额要大于 0。";
+      refreshCalcHint(surplus);
+      return;
+    }
+    const m = Math.ceil(left / x);
+    const done = new Date(2026, 11 + m - 1, 1);
+    out.textContent = `还差 ${fmt(left)}，每月存 ${fmt(x)} 的话，${m} 个月攒够（${done.getFullYear()}年${done.getMonth() + 1}月达成）。`;
+  } else {
+    if (x <= 0) {
+      out.textContent = "想几个月攒够？填一个大于 0 的月数。";
+      refreshCalcHint(surplus);
+      return;
+    }
+    const per = Math.ceil(left / x / 10) * 10;
+    const verdict = per <= surplus
+      ? "，够！"
+      : `，不够，要多攒 ${fmt(per - surplus)} 或延长时间。`;
+    out.textContent = `还差 ${fmt(left)}，想 ${x} 个月攒够，每月要存 ${fmt(per)}（本月结余 ${fmt(surplus)}${verdict}）`;
+  }
+  refreshCalcHint(surplus);
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const surplus = currentMonthlySurplus();
+  $("c-x").value = surplus;
+  $("calc-base").textContent =
+    `每月能存的默认值就是本月结余 ${fmt(surplus)}（收入 − 支出，含你记的账），不是写死的数；你记账后它会跟着变。`;
+  paintGoalList();
+  document.querySelectorAll("#calc-mode button").forEach((b) => {
+    b.addEventListener("click", () => {
+      calcMode = b.getAttribute("data-m");
+      document.querySelectorAll("#calc-mode button").forEach((x) => x.classList.toggle("on", x === b));
+      $("c-x-label").textContent = calcMode === "months" ? "每月能存（元）" : "想几个月攒够";
+      $("c-x").value = calcMode === "months" ? surplus : 6;
+      runCalculator();
+    });
+  });
+  ["c-target", "c-saved", "c-x"].forEach((id) => {
+    $(id).addEventListener("input", runCalculator);
+  });
+  $("c-run").addEventListener("click", runCalculator);
+  $("g-add").addEventListener("click", () => {
+    const name = $("g-name").value.trim();
+    const target = parseFloat($("g-target").value) || 0;
+    const saved = parseFloat($("g-saved").value) || 0;
+    const msg = $("g-msg");
+    if (!name || target <= 0) {
+      msg.textContent = "请填目标名字和大于 0 的目标金额。";
+      return;
+    }
+    const mine = readCustomGoals();
+    mine.push({ name, target, saved, note: $("g-note").value.trim() });
+    localStorage.setItem(GOAL_KEY, JSON.stringify(mine));
+    msg.textContent = `✓ 目标「${name}」已立下。`;
+    /* 立下后把四个框全清空，方便接着立下一个 */
+    $("g-name").value = "";
+    $("g-target").value = "";
+    $("g-saved").value = "0";
+    $("g-note").value = "";
+    paintGoalList();
+  });
+  runCalculator();
+});
+</script>
+</body>
+</html>
